@@ -1,4 +1,7 @@
 # PHP Encryption
+
+![Build Status!](https://app.travis-ci.com/dwgebler/php-encryption.svg?token=uj4HfXm5wqJXVuPAd984&branch=master)
+
 A cryptography API wrapping the Sodium library, providing a simple object interface for symmetrical and asymmetrical encryption, decryption, digital signing and message authentication.
 
 The `Encryption` class is able to generate secrets and keypairs, encrypt and decrypt data, sign and verify data, and generate and verify digital signatures.
