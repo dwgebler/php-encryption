@@ -1,9 +1,9 @@
 language: php
+dist: trusty
 php:
   - 7.2
   - 8.1
 install:
-  - pecl intall libsodium
   - composer install
 script:
   - php vendor/bin/phpcs --standard=PSR12 src/
