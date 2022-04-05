@@ -20,7 +20,7 @@ so you probably already have it).
 Install via Composer
 
 ```bash
-composer require dwgebler/php-encryption
+composer require dwgebler/encryption
 ```
 
 ## Usage
