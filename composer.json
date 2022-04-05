@@ -1,0 +1,26 @@
+{
+    "name": "dwgebler/encryption",
+    "description": "Encryption wrapper for PHP which uses libsodium to provide a simple API for symmetric and asymmetric encryption, decryption, digital signing and message authentication.",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Gebler\\Encryption\\": "src/",
+            "Gebler\\Encryption\\Tests\\": "tests/"
+        }
+    },
+    "authors": [
+        {
+            "name": "David Gebler",
+            "email": "me@davegebler.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.2.0",
+        "ext-sodium": "*"
+    },
+    "require-dev": {
+        "squizlabs/php_codesniffer": "^3.6",
+        "phpunit/phpunit": "^9.5"
+    }
+}
