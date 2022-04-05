@@ -22,6 +22,8 @@ composer require dwgebler/php-encryption
 
 ## Usage
 
+For a quick start, see the included `demo.php` file.
+
 Create an instance of the Encryption class.
 
 ```php
