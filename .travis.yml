@@ -1,7 +1,9 @@
 language: php
-dist: trusty
+dist: bionic
 php:
   - 7.2
+  - 7.4
+  - 8.0
   - 8.1.0
 install:
   - composer install
