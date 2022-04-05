@@ -2,7 +2,7 @@ language: php
 dist: trusty
 php:
   - 7.2
-  - 8.1
+  - 8.1.0
 install:
   - composer install
 script:
