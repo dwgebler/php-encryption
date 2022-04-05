@@ -292,9 +292,28 @@ class EncryptionTest extends TestCase
     }
 
 
-    public function testGetSignedMessage()
+    public function testGetSignedMessageThrowsInvalidArgumentExceptionOnInvalidKeyLength()
     {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('The key must be ' . SODIUM_CRYPTO_SIGN_SECRETKEYBYTES . ' long.');
+        $key = bin2hex('secret');
+        $this->crypt->getSignedMessage('Hello World', $key);
+    }
 
+    public function testGetSignedMessageThrowsInvalidArgumentExceptionOnEmptyMessage()
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('The message must not be empty.');
+        $key = bin2hex(random_bytes(SODIUM_CRYPTO_SIGN_SECRETKEYBYTES));
+        $this->crypt->getSignedMessage('', $key);
+    }
+
+    public function testGetSignedMessageReturnsBase64EncodedMessageWithSignature()
+    {
+        $key = $this->crypt->generateSigningKeypair('secret_password');
+        $message = 'Hello World';
+        $signedMessage = $this->crypt->getSignedMessage($message, $key['privateKey']);
+        $this->assertEquals('UPJvWHfjAK3hxdnwxlyGEBN4zaEnYLGrCwfvguZL/iF34sVspaOBXK9d8VKVpb4lczCZ17e1R37ENke5sTFYCEhlbGxvIFdvcmxk', $signedMessage);
     }
 
     public function testGenerateSigningSecretReturnsHexEncodedSecret()
@@ -303,9 +322,38 @@ class EncryptionTest extends TestCase
         $this->assertEquals(SODIUM_CRYPTO_SECRETBOX_KEYBYTES, strlen(hex2bin($secret)));
     }
 
-
-    public function testVerifySignedMessage()
+    public function testVerifySignedMessageThrowsInvalidArgumentExceptionOnInvalidKeyLength()
     {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('The key must be ' . SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES . ' long.');
+        $key = bin2hex('secret');
+        $this->crypt->verifySignedMessage('UPJvWHfjAK3hxdnwxlyGEBN4zaEnYLGrCwfvguZL/iF34sVspaOBXK9d8VKVpb4lczCZ17e1R37ENke5sTFYCEhlbGxvIFdvcmxk', $key);
+    }
 
+    public function testVerifySignedMessageThrowsInvalidArgumentExceptionOnEmptyMessage()
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('The message must not be empty.');
+        $key = bin2hex(random_bytes(SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES));
+        $this->crypt->verifySignedMessage('', $key);
+    }
+
+    public function testVerifySignedMessageThrowsRuntimeExceptionOnInvalidSignature()
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Could not verify message.');
+        $key = $this->crypt->generateSigningKeypair('secret_password');
+        $badKey = $this->crypt->generateSigningKeypair('bad_password');
+        $message = 'Hello World';
+        $signedMessage = $this->crypt->getSignedMessage($message, $key['privateKey']);
+        $this->crypt->verifySignedMessage($signedMessage, $badKey['publicKey']);
+    }
+
+    public function testVerifySignedMessageReturnsPlainTextMessageOnValidSignature()
+    {
+        $key = $this->crypt->generateSigningKeypair('secret_password');
+        $message = 'Hello World';
+        $signedMessage = $this->crypt->getSignedMessage($message, $key['privateKey']);
+        $this->assertEquals($message, $this->crypt->verifySignedMessage($signedMessage, $key['publicKey']));
     }
 }

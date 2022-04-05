@@ -37,6 +37,8 @@ class Encryption
      * @param string|null $password
      * @param bool $keyIsHex
      * @return string
+     * @throws InvalidArgumentException
+     * @throws RuntimeException
      */
     public function encryptWithSecret(string $data, ?string &$password = "", bool $keyIsHex = true): string
     {
@@ -79,7 +81,10 @@ class Encryption
      * Symmetrical (shared secret) decryption of a message with a password.
      * @param string $data
      * @param string $password
+     * @param bool $keyIsHex
      * @return string
+     * @throws RuntimeException
+     * @throws InvalidArgumentException
      */
     public function decryptWithSecret(string $data, string $password, bool $keyIsHex = true): string
     {
@@ -235,7 +240,7 @@ class Encryption
                 throw new InvalidArgumentException('The message must not be empty.');
             }
 
-            return sodium_bin2hex(sodium_crypto_sign($message, $privateKey));
+            return sodium_bin2base64(sodium_crypto_sign($message, $privateKey), SODIUM_BASE64_VARIANT_ORIGINAL);
         } catch (SodiumException $e) {
             throw new RuntimeException('Could not sign data', 0, $e);
         }
@@ -248,7 +253,7 @@ class Encryption
     {
         try {
             $publicKey = sodium_hex2bin($publicKey);
-            $signedMessage = sodium_hex2bin($signedMessage);
+            $signedMessage = sodium_base642bin($signedMessage, SODIUM_BASE64_VARIANT_ORIGINAL);
             if (strlen($publicKey) !== SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES) {
                 throw new InvalidArgumentException('The key must be ' . SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES . ' long.');
             }

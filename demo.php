@@ -6,90 +6,86 @@ require_once('vendor/autoload.php');
 
 $crypt = new Encryption();
 
-echo PHP_EOL,"-------------------------------------------------------",PHP_EOL;
+/**
+ * Example 1: Symmetric (anonymous) message authentication.
+ */
 
-$data = "Hello world! This is a secret message.";
-$result = $crypt->encryptWithSecret($data, $mySecret);
-echo "Encrypted data: ", $result, PHP_EOL;
-echo $mySecret, PHP_EOL;
-$decrypted = $crypt->decryptWithSecret($result, $mySecret);
-echo "Decrypted data: ", $decrypted, PHP_EOL;
-
-echo PHP_EOL,"-------------------------------------------------------",PHP_EOL;
-
-
-$key = $crypt->generateEncryptionSecret();
-
-$data = 'Hello World! This is a secret message.';
-
-$result = $crypt->encryptWithSecret($data, $key);
-
-echo $result, PHP_EOL;
-
-//echo $crypt->decryptWithSecret($result, hex2bin($keyHex)), PHP_EOL;
-echo $crypt->decryptWithSecret($result, $key), PHP_EOL;
-
-$hash = sodium_bin2hex(sodium_crypto_generichash("Some password", "", 32));
-echo $hash, PHP_EOL;
-
-var_dump($hash === 'd817c88db153f90ce9a93bdbd0b9319137b6e673bd0abf7ca5a6ceeb53cadc97');
-
-echo PHP_EOL,"-------------------------------------------------------",PHP_EOL;
-
-$key = random_bytes(32);
-$data = json_encode(['message' => 'Hello World! This is a different secret message.']);
-$result = $crypt->encryptWithSecret($data, $key, false);
-echo $result, PHP_EOL;
-echo $crypt->decryptWithSecret($result, $key, false), PHP_EOL;
-
-echo PHP_EOL,"-------------------------------------------------------",PHP_EOL;
-
-$data = "Hello, this is a secret message from Alice to Bob.";
-$aliceKeypair = $crypt->generateEncryptionKeypair();
-$bobKeypair = $crypt->generateEncryptionKeypair();
-
-$result = $crypt->encryptWithKey($data, $bobKeypair['publicKey'], $aliceKeypair['privateKey']);
-echo $result, PHP_EOL;
-$decrypted = $crypt->decryptWithKey($result, $bobKeypair['privateKey'], $aliceKeypair['publicKey']);
-echo $decrypted, PHP_EOL;
-
-echo PHP_EOL,"-------------------------------------------------------",PHP_EOL;
-
-$data = "Hello, this is a secret message to Alice, unauthenticated.";
-$result = $crypt->encryptWithKey($data, $aliceKeypair['publicKey']);
-echo $result, PHP_EOL;
-$decrypted = $crypt->decryptWithKey($result, $aliceKeypair['keypair']);
-echo $decrypted, PHP_EOL;
-
-echo PHP_EOL,"-------------------------------------------------------",PHP_EOL;
-$aliceSigningKey = $crypt->generateSigningKeypair();
-$bobSigningKey = $crypt->generateSigningKeypair();
-
-$data = "Hello, this is a message which is signed by Bob.";
-$signedMessage = $crypt->getSignedMessage($data, $bobSigningKey['privateKey']);
-echo $signedMessage, PHP_EOL;
-$verifiedMessage = $crypt->verifySignedMessage($signedMessage, $bobSigningKey['publicKey']);
-var_dump($verifiedMessage);
-try {
-    $verifiedMessage = $crypt->verifySignedMessage($signedMessage, $aliceSigningKey['publicKey']);
-} catch (RuntimeException $e) {
-    echo $e->getMessage(), PHP_EOL;
+$message = "This is a message signed anonymously with a secret key.";
+$secret = $crypt->generateSigningSecret();
+$signature = $crypt->signWithSecret($message, $secret);
+$messageAuthenticated = $crypt->verifyWithSecret($signature, $message, $secret);
+if ($messageAuthenticated === true) {
+    echo "The message has not been tampered with.", PHP_EOL;
 }
 
 echo PHP_EOL,"-------------------------------------------------------",PHP_EOL;
-$data = "Hello, this is a message which is signed by Bob.";
-$signature = $crypt->getMessageSignature($data, $bobSigningKey['privateKey']);
-echo $signature, PHP_EOL;
-$verified = $crypt->verifyMessageSignature($data, $signature, $bobSigningKey['publicKey']);
-var_dump($verified);
-$verified = $crypt->verifyMessageSignature($data, $signature, $aliceSigningKey['publicKey']);
-var_dump($verified);
+
+/**
+ * Example 2: Asymmetric (identified) message authentication.
+ */
+
+$aliceSigningKeypair = $crypt->generateSigningKeypair();
+$message = "This is a message signed by Alice.";
+$signedMessage = $crypt->getSignedMessage($message, $aliceSigningKeypair['privateKey']);
+echo $signedMessage, PHP_EOL;
+$verifiedMessage = $crypt->verifySignedMessage($signedMessage, $aliceSigningKeypair['publicKey']);
+echo $verifiedMessage, PHP_EOL;
 
 echo PHP_EOL,"-------------------------------------------------------",PHP_EOL;
-$data = "Hello, this is a message signed with a shared secret.";
-$secret = $crypt->generateEncryptionSecret();
-$signature = $crypt->signWithSecret($data, $secret);
-echo $signature, PHP_EOL;
-$verified = $crypt->verifyWithSecret($signature, $data, $secret);
-var_dump($verified);
+
+/**
+ * Example 3: Asymmetric (identified) message signature (detached).
+ */
+
+$aliceSigningKeypair = $crypt->generateSigningKeypair();
+$message = "This is a message signed by Alice.";
+$signature = $crypt->getMessageSignature($message, $aliceSigningKeypair['privateKey']);
+$messageAuthenticated = $crypt->verifyMessageSignature($message, $signature, $aliceSigningKeypair['publicKey']);
+if ($messageAuthenticated === true) {
+    echo "The message has not been tampered with.", PHP_EOL;
+}
+
+echo PHP_EOL,"-------------------------------------------------------",PHP_EOL;
+
+/**
+ * Example 4: Symmetric encryption with secret key.
+ */
+
+$mySecret = $crypt->generateEncryptionSecret();
+$message = "This is a test message.";
+$encrypted = $crypt->encryptWithSecret($message, $mySecret, false);
+echo $encrypted, PHP_EOL;
+$decrypted = $crypt->decryptWithSecret($encrypted, $mySecret, false);
+echo $decrypted, PHP_EOL;
+
+echo PHP_EOL,"-------------------------------------------------------",PHP_EOL;
+
+/**
+ * Example 5: Asymmetric encryption with public key and signed by sender.
+ */
+
+$aliceKeypair = $crypt->generateEncryptionKeypair("alice_secret");
+$bobKeypair = $crypt->generateEncryptionKeypair("bob_secret");
+
+$message = "Hello Bob! This is a secret message from Alice.";
+$encrypted = $crypt->encryptWithKey($message, $bobKeypair['publicKey'], $aliceKeypair['privateKey']);
+echo $encrypted, PHP_EOL;
+
+$decrypted = $crypt->decryptWithKey($encrypted, $bobKeypair['privateKey'], $aliceKeypair['publicKey']);
+echo $decrypted, PHP_EOL;
+
+echo PHP_EOL,"-------------------------------------------------------",PHP_EOL;
+
+/**
+ * Example 6: Anonymous asymmetric encryption to recipient with public key only.
+ */
+
+$bobKeypair = $crypt->generateEncryptionKeypair("bob_secret");
+$message = "Hello Bob! This is a secret message from an unknown sender.";
+$encrypted = $crypt->encryptWithKey($message, $bobKeypair['publicKey']);
+echo $encrypted, PHP_EOL;
+
+$decrypted = $crypt->decryptWithKey($encrypted, $bobKeypair['keypair']);
+echo $decrypted, PHP_EOL;
+
 echo PHP_EOL,"-------------------------------------------------------",PHP_EOL;
