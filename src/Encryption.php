@@ -137,7 +137,10 @@ class Encryption
                 throw new InvalidArgumentException('The data must not be empty.');
             }
 
-            return sodium_bin2hex(sodium_crypto_auth($data, $realKey));
+            $result = sodium_bin2hex(sodium_crypto_auth($data, $realKey));
+            sodium_memzero($data);
+            sodium_memzero($realKey);
+            return $result;
         } catch (SodiumException $e) {
             throw new RuntimeException('Could not sign data', 0, $e);
         }
@@ -156,7 +159,10 @@ class Encryption
             if (strlen($key) !== SODIUM_CRYPTO_AUTH_KEYBYTES) {
                 throw new InvalidArgumentException('The key must be ' . SODIUM_CRYPTO_AUTH_KEYBYTES . ' long.');
             }
-            return sodium_crypto_auth_verify($signature, $data, $key);
+            $result = sodium_crypto_auth_verify($signature, $data, $key);
+            sodium_memzero($signature);
+            sodium_memzero($key);
+            return $result;
         } catch (SodiumException $e) {
             throw new RuntimeException('Could not verify data', 0, $e);
         }
@@ -341,6 +347,7 @@ class Encryption
             $recipientPublicKey = sodium_hex2bin($recipientPublicKey);
             $encrypted = sodium_crypto_box_seal($data, $recipientPublicKey);
             sodium_memzero($recipientPublicKey);
+            sodium_memzero($data);
             return sodium_bin2base64($encrypted, SODIUM_BASE64_VARIANT_ORIGINAL);
         } catch (SodiumException $e) {
             throw new RuntimeException('Could not encrypt data', 0, $e);
@@ -364,6 +371,8 @@ class Encryption
             $decoded = sodium_base642bin($data, SODIUM_BASE64_VARIANT_ORIGINAL);
             $plaintext = sodium_crypto_box_seal_open($decoded, $recipientKeyPair);
             sodium_memzero($recipientKeyPair);
+            sodium_memzero($decoded);
+            sodium_memzero($data);
             return $plaintext;
         } catch (SodiumException $e) {
             throw new RuntimeException('Could not decrypt data', 0, $e);
