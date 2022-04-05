@@ -194,7 +194,9 @@ class Encryption
     public function generateEncryptionKeypair(?string $password = ''): array
     {
         try {
-            $keypair = empty($password) ? sodium_crypto_box_keypair() : sodium_crypto_box_seed_keypair(sodium_crypto_generichash($password, "", 32));
+            $keypair = empty($password) ?
+                sodium_crypto_box_keypair() :
+                sodium_crypto_box_seed_keypair(sodium_crypto_generichash($password, "", 32));
 
             return [
                 'keypair' => sodium_bin2hex($keypair),
@@ -213,7 +215,9 @@ class Encryption
     public function generateSigningKeypair(?string $password = ''): array
     {
         try {
-            $keypair = empty($password) ? sodium_crypto_sign_keypair() : sodium_crypto_sign_seed_keypair(sodium_crypto_generichash($password, "", 32));
+            $keypair = empty($password) ?
+                sodium_crypto_sign_keypair() :
+                sodium_crypto_sign_seed_keypair(sodium_crypto_generichash($password, "", 32));
 
             return [
                 'keypair' => sodium_bin2hex($keypair),
@@ -331,7 +335,7 @@ class Encryption
     {
         try {
             if ($senderPrivateKey !== null) {
-                return $this->_encryptAuthenticated($data, $recipientPublicKey, $senderPrivateKey);
+                return $this->encryptAuthenticated($data, $recipientPublicKey, $senderPrivateKey);
             }
             // Anonymous encryption
             $recipientPublicKey = sodium_hex2bin($recipientPublicKey);
@@ -353,7 +357,7 @@ class Encryption
     {
         try {
             if ($senderPublicKey !== null) {
-                return $this->_decryptAuthenticated($data, $recipientKey, $senderPublicKey);
+                return $this->decryptAuthenticated($data, $recipientKey, $senderPublicKey);
             }
             // Anonymous decryption
             $recipientKeyPair = sodium_hex2bin($recipientKey);
@@ -370,7 +374,7 @@ class Encryption
      * @throws SodiumException
      * @throws Exception
      */
-    private function _encryptAuthenticated(string $data, string $recipientPublicKey, string $senderPrivateKey): string
+    private function encryptAuthenticated(string $data, string $recipientPublicKey, string $senderPrivateKey): string
     {
         $senderPrivateKey = sodium_hex2bin($senderPrivateKey);
         $recipientPublicKey = sodium_hex2bin($recipientPublicKey);
@@ -389,7 +393,7 @@ class Encryption
     /**
      * @throws SodiumException
      */
-    private function _decryptAuthenticated(string $data, string $recipientPrivateKey, string $senderPublicKey): string
+    private function decryptAuthenticated(string $data, string $recipientPrivateKey, string $senderPublicKey): string
     {
         $senderPublicKey = sodium_hex2bin($senderPublicKey);
         $recipientPrivateKey = sodium_hex2bin($recipientPrivateKey);
@@ -410,6 +414,5 @@ class Encryption
             throw new RuntimeException('Decryption failed.');
         }
         return $plaintext;
-
     }
 }
