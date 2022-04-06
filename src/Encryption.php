@@ -56,7 +56,9 @@ class Encryption
                 $key = sodium_hex2bin($password);
             }
 
-            $key = sodium_crypto_generichash($key, "", 32);
+            if (strlen($key) < SODIUM_CRYPTO_SECRETBOX_KEYBYTES) {
+                $key = sodium_crypto_generichash($key, "", 32);
+            }
 
             if (strlen($key) !== SODIUM_CRYPTO_SECRETBOX_KEYBYTES) {
                 throw new InvalidArgumentException('Key must be 32 bytes long');
@@ -92,7 +94,12 @@ class Encryption
             if ($keyIsHex) {
                 $password = sodium_hex2bin($password);
             }
-            $password = sodium_crypto_generichash($password, "", 32);
+            if (strlen($password) < SODIUM_CRYPTO_SECRETBOX_KEYBYTES) {
+                $password = sodium_crypto_generichash($password, "", 32);
+            }
+            if (strlen($password) !== SODIUM_CRYPTO_SECRETBOX_KEYBYTES) {
+                throw new InvalidArgumentException('Key must be 32 bytes long');
+            }
             $decoded = sodium_base642bin($data, SODIUM_BASE64_VARIANT_ORIGINAL);
             if (strlen($decoded) < (SODIUM_CRYPTO_SECRETBOX_NONCEBYTES + SODIUM_CRYPTO_SECRETBOX_MACBYTES)) {
                 throw new InvalidArgumentException('Encrypted data is too short');
@@ -187,7 +194,7 @@ class Encryption
     public function generateEncryptionSecret(): string
     {
         try {
-            return sodium_bin2hex(sodium_crypto_generichash_keygen());
+            return sodium_bin2hex(sodium_crypto_secretbox_keygen());
         } catch (SodiumException $e) {
             throw new RuntimeException('Could not generate encryption key', 0, $e);
         }

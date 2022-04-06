@@ -53,6 +53,14 @@ echo PHP_EOL,"-------------------------------------------------------",PHP_EOL;
 
 $mySecret = $crypt->generateEncryptionSecret();
 $message = "This is a test message.";
+$encrypted = $crypt->encryptWithSecret($message, $mySecret);
+echo $encrypted, PHP_EOL;
+$decrypted = $crypt->decryptWithSecret($encrypted, $mySecret);
+echo $decrypted, PHP_EOL;
+
+$mySecret = random_bytes(32);
+$message = "This is another test message.";
+// Password is raw binary data.
 $encrypted = $crypt->encryptWithSecret($message, $mySecret, false);
 echo $encrypted, PHP_EOL;
 $decrypted = $crypt->decryptWithSecret($encrypted, $mySecret, false);
