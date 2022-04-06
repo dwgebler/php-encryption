@@ -57,9 +57,11 @@ Alternatively, you can pass in a reference to a null or empty string to generate
     $result = $crypt->encryptWithSecret($data, $mySecret);
 
     // Alternatively, create a key and encode it as hex.
+    // Keys should be 32 bytes long - shorter keys are forced to this length by a deterministic hash,
+    // but this is not recommended. Longer keys will throw an InvalidArgumentException.
     $mySecret = bin2hex("my_super_secret_key");
     // ...or use random_bytes() to generate a random key.
-    // $mySecret = bin2hex(random_bytes(32));
+    $mySecret = bin2hex(random_bytes(32));
     $result = $crypt->encryptWithSecret($data, $mySecret);
     
     // Or, pass in a raw binary key by setting the `hex` parameter to false.
