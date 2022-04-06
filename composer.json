@@ -5,6 +5,7 @@
         }
     },
     "name": "dwgebler/encryption",
+    "version": "1.0.1",
     "description": "Encryption wrapper for PHP which uses libsodium to provide a simple API for symmetric and asymmetric encryption, decryption, digital signing and message authentication.",
     "type": "library",
     "license": "MIT",
