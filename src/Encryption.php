@@ -11,7 +11,7 @@ class Encryption
 {
     public function __construct()
     {
-        if (!extension_loaded('sodium')) {
+        if (version_compare(phpversion(), '7.2.0', '<') && !extension_loaded('sodium') ) {
             throw new RuntimeException('The sodium extension is not loaded.');
         }
     }
