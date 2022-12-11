@@ -32,28 +32,104 @@ class Encryption
     }
 
     /**
+     * Symmetric encryption using a password.
+     * @param string $data The data to encrypt
+     * @param string $password The password to use for encryption
+     * @return string The encrypted data
+     * @throws RuntimeException If encryption fails
+     */
+    public function encryptWithPassword(string $data, string $password): string
+    {
+        try {
+            $salt = random_bytes(SODIUM_CRYPTO_PWHASH_SALTBYTES);
+            $key = sodium_crypto_pwhash(
+                SODIUM_CRYPTO_SECRETBOX_KEYBYTES,
+                $password,
+                $salt,
+                SODIUM_CRYPTO_PWHASH_OPSLIMIT_MODERATE,
+                SODIUM_CRYPTO_PWHASH_MEMLIMIT_MODERATE
+            );
+            $nonce = random_bytes(SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
+            $ciphertext = sodium_crypto_secretbox($data, $nonce, $key);
+            $encrypted = sodium_bin2base64($salt . $nonce . $ciphertext, SODIUM_BASE64_VARIANT_ORIGINAL);
+            sodium_memzero($password);
+            sodium_memzero($key);
+            sodium_memzero($nonce);
+            return $encrypted;
+        } catch (SodiumException $e) {
+            throw new RuntimeException('Could not encrypt data.', 0, $e);
+        } catch (Exception $e) {
+            throw new RuntimeException('Unable to generate random bytes', 0, $e);
+        }
+    }
+
+    /**
+     * Symmetric decryption using a password.
+     * @param string $encrypted The encrypted data
+     * @param string $password The password to use for decryption
+     * @return string The decrypted data
+     * @throws RuntimeException If decryption fails
+     */
+    public function decryptWithPassword(string $encrypted, string $password): string
+    {
+        try {
+            $decoded = sodium_base642bin($encrypted, SODIUM_BASE64_VARIANT_ORIGINAL);
+            $salt = mb_substr($decoded, 0, SODIUM_CRYPTO_PWHASH_SALTBYTES, '8bit');
+            $nonce = mb_substr(
+                $decoded,
+                SODIUM_CRYPTO_PWHASH_SALTBYTES,
+                SODIUM_CRYPTO_SECRETBOX_NONCEBYTES,
+                '8bit'
+            );
+            $ciphertext = mb_substr(
+                $decoded,
+                SODIUM_CRYPTO_PWHASH_SALTBYTES + SODIUM_CRYPTO_SECRETBOX_NONCEBYTES,
+                null,
+                '8bit'
+            );
+            $key = sodium_crypto_pwhash(
+                SODIUM_CRYPTO_SECRETBOX_KEYBYTES,
+                $password,
+                $salt,
+                SODIUM_CRYPTO_PWHASH_OPSLIMIT_MODERATE,
+                SODIUM_CRYPTO_PWHASH_MEMLIMIT_MODERATE
+            );
+            $decrypted = sodium_crypto_secretbox_open($ciphertext, $nonce, $key);
+            if ($decrypted === false) {
+                throw new RuntimeException('Could not decrypt data.');
+            }
+            sodium_memzero($password);
+            sodium_memzero($key);
+            sodium_memzero($nonce);
+            return $decrypted;
+        } catch (SodiumException $e) {
+            throw new RuntimeException('Could not decrypt data.', 0, $e);
+        }
+    }
+
+    /**
      * Symmetrical (shared secret) encryption of a message with a password.
      * @param string $data
-     * @param string|null $password
+     * @param string|null $inputKey
      * @param bool $keyIsHex
      * @return string
      * @throws InvalidArgumentException
      * @throws RuntimeException
      */
-    public function encryptWithSecret(string $data, ?string &$password = "", bool $keyIsHex = true): string
+    public function encryptWithSecret(string $data, ?string &$inputKey = "", bool $keyIsHex = true): string
     {
         try {
             if ($data === '') {
                 throw new InvalidArgumentException('Data to encrypt cannot be empty.');
             }
-            if ($password === null || $password === '') {
-                $password = sodium_bin2hex(sodium_crypto_secretbox_keygen());
+            if ($inputKey === null || $inputKey === '') {
+                $inputKey = sodium_bin2hex(sodium_crypto_secretbox_keygen());
                 $keyIsHex = true;
             }
 
-            $key = $password;
+            $key = $inputKey;
             if ($keyIsHex) {
-                $key = sodium_hex2bin($password);
+                $key = sodium_hex2bin($inputKey);
             }
 
             if (strlen($key) < SODIUM_CRYPTO_SECRETBOX_KEYBYTES) {
@@ -82,22 +158,22 @@ class Encryption
     /**
      * Symmetrical (shared secret) decryption of a message with a password.
      * @param string $data
-     * @param string $password
+     * @param string $inputKey
      * @param bool $keyIsHex
      * @return string
      * @throws RuntimeException
      * @throws InvalidArgumentException
      */
-    public function decryptWithSecret(string $data, string $password, bool $keyIsHex = true): string
+    public function decryptWithSecret(string $data, string $inputKey, bool $keyIsHex = true): string
     {
         try {
             if ($keyIsHex) {
-                $password = sodium_hex2bin($password);
+                $inputKey = sodium_hex2bin($inputKey);
             }
-            if (strlen($password) < SODIUM_CRYPTO_SECRETBOX_KEYBYTES) {
-                $password = sodium_crypto_generichash($password, "", 32);
+            if (strlen($inputKey) < SODIUM_CRYPTO_SECRETBOX_KEYBYTES) {
+                $inputKey = sodium_crypto_generichash($inputKey, "", 32);
             }
-            if (strlen($password) !== SODIUM_CRYPTO_SECRETBOX_KEYBYTES) {
+            if (strlen($inputKey) !== SODIUM_CRYPTO_SECRETBOX_KEYBYTES) {
                 throw new InvalidArgumentException('Key must be 32 bytes long');
             }
             $decoded = sodium_base642bin($data, SODIUM_BASE64_VARIANT_ORIGINAL);
@@ -106,13 +182,13 @@ class Encryption
             }
             $nonce = mb_substr($decoded, 0, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES, '8bit');
             $ciphertext = mb_substr($decoded, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES, null, '8bit');
-            $plaintext = sodium_crypto_secretbox_open($ciphertext, $nonce, $password);
+            $plaintext = sodium_crypto_secretbox_open($ciphertext, $nonce, $inputKey);
             if ($plaintext === false) {
                 throw new InvalidArgumentException('Could not decrypt data; probably the wrong password');
             }
             sodium_memzero($ciphertext);
             sodium_memzero($nonce);
-            sodium_memzero($password);
+            sodium_memzero($inputKey);
             return $plaintext;
         } catch (SodiumException $e) {
             throw new RuntimeException('Could not decrypt data; probably password wrong format', 0, $e);
