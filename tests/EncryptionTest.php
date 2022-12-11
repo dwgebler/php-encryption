@@ -23,6 +23,31 @@ class EncryptionTest extends TestCase
         return (bool) preg_match('/^[a-zA-Z0-9\/\r\n+]*={0,2}$/', $string);
     }
 
+    public function testEncryptWithPasswordReturnsEncryptedDataBase64String()
+    {
+        $message = 'This is a test message';
+        $encrypted = $this->crypt->encryptWithPassword($message, 'password');
+        $this->assertTrue($this->isBase64Encoded($encrypted));
+        $this->assertNotEquals($message, base64_decode($encrypted));
+    }
+
+    public function testDecryptWithPasswordReturnsDecryptedMessage()
+    {
+        $message = 'This is a test message';
+        $encrypted = $this->crypt->encryptWithPassword($message, 'password');
+        $decrypted = $this->crypt->decryptWithPassword($encrypted, 'password');
+        $this->assertEquals($message, $decrypted);
+    }
+
+    public function testDecryptWithPasswordThrowsExceptionOnInvalidPassword()
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Could not decrypt data');
+        $message = 'This is a test message';
+        $encrypted = $this->crypt->encryptWithPassword($message, 'password');
+        $decrypted = $this->crypt->decryptWithPassword($encrypted, 'wrong password');
+    }
+
     public function testDecryptWithSecretReturnsDecryptedMessageWithCorrectSecret()
     {
         $secret = bin2hex(random_bytes(32));

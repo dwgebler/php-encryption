@@ -38,7 +38,23 @@ Create an instance of the Encryption class.
 
 ### Symmetric Encryption
 
-Use the function `encryptWithSecret(string $message, string $password, bool $hexEncoded = true)` to encrypt a message with a secret key.
+#### With a password
+
+Use the function `encryptWithPassword()` to encrypt a message using a password. 
+A secure key will be deterministically derived from the password using `sodium_crypto_pwhash()`.
+The returned encrypted data will be base64 encoded and include the randomly generated salt used to derive the key.
+
+The corresponding `decryptWithPassword()` function will decrypt the message using the same password.
+
+```php
+<?php
+    $encrypted = $crypt->encryptWithPassword('This is a secret message', 'SecurePassword');
+    $decrypted = $crypt->decryptWithPassword($encrypted, 'SecurePassword');
+```
+
+#### With a secret key
+
+Use the function `encryptWithSecret(string $message, string $key, bool $hexEncoded = true)` to encrypt a message with a secret key.
 This function expects the message or data to be encrypted as a string, and the secret key as a hexadecimal string.
 If your secret is not a hexadecimal encoded, you can pass `false` as the third parameter to indicate that the secret is not encoded.
 
