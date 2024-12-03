@@ -35,10 +35,12 @@ class Encryption
      * Symmetric encryption using a password.
      * @param string $data The data to encrypt
      * @param string $password The password to use for encryption
+     * @param int $sodium_crypto_pwhash_opslimit maximum amount of computations
+     * @param int $sodium_crypto_pwhash_memlimit maximum amount of RAM that the function will use, in bytes.
      * @return string The encrypted data
      * @throws RuntimeException If encryption fails
      */
-    public function encryptWithPassword(string $data, string $password): string
+    public function encryptWithPassword(string $data, string $password, $sodium_crypto_pwhash_opslimit = SODIUM_CRYPTO_PWHASH_OPSLIMIT_MODERATE, $sodium_crypto_pwhash_memlimit = SODIUM_CRYPTO_PWHASH_MEMLIMIT_MODERATE): string
     {
         try {
             $salt = random_bytes(SODIUM_CRYPTO_PWHASH_SALTBYTES);
@@ -46,8 +48,8 @@ class Encryption
                 SODIUM_CRYPTO_SECRETBOX_KEYBYTES,
                 $password,
                 $salt,
-                SODIUM_CRYPTO_PWHASH_OPSLIMIT_MODERATE,
-                SODIUM_CRYPTO_PWHASH_MEMLIMIT_MODERATE
+                $sodium_crypto_pwhash_opslimit,
+                $sodium_crypto_pwhash_memlimit
             );
             $nonce = random_bytes(SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
             $ciphertext = sodium_crypto_secretbox($data, $nonce, $key);
@@ -67,10 +69,12 @@ class Encryption
      * Symmetric decryption using a password.
      * @param string $encrypted The encrypted data
      * @param string $password The password to use for decryption
+     * @param int $sodium_crypto_pwhash_opslimit maximum amount of computations
+     * @param int $sodium_crypto_pwhash_memlimit maximum amount of RAM that the function will use, in bytes.
      * @return string The decrypted data
      * @throws RuntimeException If decryption fails
      */
-    public function decryptWithPassword(string $encrypted, string $password): string
+    public function decryptWithPassword(string $encrypted, string $password, $sodium_crypto_pwhash_opslimit = SODIUM_CRYPTO_PWHASH_OPSLIMIT_MODERATE,$sodium_crypto_pwhash_memlimit = SODIUM_CRYPTO_PWHASH_MEMLIMIT_MODERATE): string
     {
         try {
             $decoded = sodium_base642bin($encrypted, SODIUM_BASE64_VARIANT_ORIGINAL);
@@ -91,8 +95,8 @@ class Encryption
                 SODIUM_CRYPTO_SECRETBOX_KEYBYTES,
                 $password,
                 $salt,
-                SODIUM_CRYPTO_PWHASH_OPSLIMIT_MODERATE,
-                SODIUM_CRYPTO_PWHASH_MEMLIMIT_MODERATE
+                $sodium_crypto_pwhash_opslimit,
+                $sodium_crypto_pwhash_memlimit
             );
             $decrypted = sodium_crypto_secretbox_open($ciphertext, $nonce, $key);
             if ($decrypted === false) {
