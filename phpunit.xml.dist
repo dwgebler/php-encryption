@@ -17,10 +17,4 @@
             <directory>src</directory>
         </include>
     </source>
-    <coverage>
-        <report>
-            <clover outputFile="coverage.xml"/>
-            <text outputFile="php://stdout" showOnlySummary="true"/>
-        </report>
-    </coverage>
 </phpunit>
