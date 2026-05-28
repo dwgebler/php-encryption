@@ -33,7 +33,12 @@ final readonly class Mac
     {
         $this->assertKeyLength($key);
 
-        $tag = Encoding::fromHex($mac);
+        try {
+            $tag = Encoding::fromHex($mac);
+        } catch (\InvalidArgumentException) {
+            return false;
+        }
+
         if (strlen($tag) !== SODIUM_CRYPTO_AUTH_BYTES) {
             return false;
         }

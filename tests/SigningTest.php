@@ -98,11 +98,16 @@ final class SigningTest extends TestCase
         $this->signing->signAttached('hello', str_repeat("\0", 16));
     }
 
-    public function testVerifyDetachedRejectsWrongSignatureLength(): void
+    public function testVerifyDetachedReturnsFalseForWrongSignatureLength(): void
     {
         $kp = $this->signing->generateKeypair();
-        $this->expectException(InvalidKeyException::class);
-        $this->signing->verifyDetached(Encoding::toHex(str_repeat("\0", 16)), 'hi', $kp->publicKey);
+        self::assertFalse($this->signing->verifyDetached(Encoding::toHex(str_repeat("\0", 16)), 'hi', $kp->publicKey));
+    }
+
+    public function testVerifyDetachedReturnsFalseForNonHexSignature(): void
+    {
+        $kp = $this->signing->generateKeypair();
+        self::assertFalse($this->signing->verifyDetached('not-hex-data!', 'hi', $kp->publicKey));
     }
 
     public function testSigningKeyPairConstructorRejectsWrongLength(): void

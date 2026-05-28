@@ -72,13 +72,14 @@ final readonly class Signing
         }
         $this->assertLength($publicKey, SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES, 'public key');
 
-        $sigBytes = Encoding::fromHex($signature);
+        try {
+            $sigBytes = Encoding::fromHex($signature);
+        } catch (\InvalidArgumentException) {
+            return false;
+        }
+
         if (strlen($sigBytes) !== SODIUM_CRYPTO_SIGN_BYTES) {
-            throw new InvalidKeyException(sprintf(
-                'Signature must decode to exactly %d bytes; got %d.',
-                SODIUM_CRYPTO_SIGN_BYTES,
-                strlen($sigBytes),
-            ));
+            return false;
         }
 
         return sodium_crypto_sign_verify_detached($sigBytes, $message, $publicKey);

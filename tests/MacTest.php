@@ -72,4 +72,10 @@ final class MacTest extends TestCase
         $key = $this->mac->generateKey();
         self::assertFalse($this->mac->verify(Encoding::toHex(str_repeat("\0", 8)), 'hello', $key));
     }
+
+    public function testVerifyReturnsFalseForNonHexMac(): void
+    {
+        $key = $this->mac->generateKey();
+        self::assertFalse($this->mac->verify('not-hex-data!', 'hello', $key));
+    }
 }
