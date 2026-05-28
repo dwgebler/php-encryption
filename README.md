@@ -1,255 +1,192 @@
-# PHP Encryption
+# php-encryption
 
-![Build Status!](https://app.travis-ci.com/dwgebler/php-encryption.svg?token=uj4HfXm5wqJXVuPAd984&branch=master)
+A small PHP wrapper around libsodium, providing focused classes for
+password hashing, symmetric encryption, asymmetric encryption, digital
+signing, and message authentication.
 
-A cryptography API wrapping the Sodium library, providing a simple object interface for symmetrical and asymmetrical encryption, decryption, digital signing and message authentication.
+**Upgrading from 1.x?** See [UPGRADE-2.0.md](UPGRADE-2.0.md) — 2.0 is a
+clean break that fixes several security issues, including a critical issue
+with 1.x `hashPassword()`. **Read the security advisory at the top of
+UPGRADE-2.0.md if you stored 1.x password hashes.**
 
-The `Encryption` class is able to generate secrets and keypairs, encrypt and decrypt data, sign and verify data, and generate and verify digital signatures.
+## Requirements
 
-Encrypted messages are returned base64 encoded, while keys and secrets are returned as hexadecimal strings.
-
-The transformation of these to and from binary data makes use of the `sodium_*` timing-safe functions.
-
-All underlying cryptography is performed using the [Sodium](https://www.php.net/manual/en/book.sodium.php) library.
-
-This library requires PHP 7.2 or higher with `libsodium` installed (this is bundled with PHP 7.2 or above, 
-so you probably already have it).
+- PHP 8.2 or higher
+- `ext-sodium` (bundled with PHP since 7.2)
 
 ## Installation
-
-Install via Composer
 
 ```bash
 composer require dwgebler/encryption
 ```
 
-## Usage
-
-For a quick start, see the included `demo.php` file.
-
-Create an instance of the Encryption class.
+## Quick start
 
 ```php
-<?php
-    use Gebler\Encryption\Encryption;
-    
-    $crypt = new Encryption();
+use Gebler\Encryption\Encryption;
+
+$crypt = new Encryption();
 ```
 
-### Symmetric Encryption
-
-#### With a password
-
-Use the function `encryptWithPassword()` to encrypt a message using a password. 
-A secure key will be deterministically derived from the password using `sodium_crypto_pwhash()`.
-The returned encrypted data will be base64 encoded and include the randomly generated salt used to derive the key.
-
-The corresponding `decryptWithPassword()` function will decrypt the message using the same password.
+The `Encryption` object is a facade — call accessors to reach each
+primitive:
 
 ```php
-<?php
-    $encrypted = $crypt->encryptWithPassword('This is a secret message', 'SecurePassword');
-    $decrypted = $crypt->decryptWithPassword($encrypted, 'SecurePassword');
+$crypt->passwords();   // PasswordHasher
+$crypt->symmetric();   // SymmetricCrypto
+$crypt->asymmetric();  // AsymmetricCrypto
+$crypt->signing();     // Signing
+$crypt->mac();         // Mac
 ```
 
-#### With a secret key
+Keys at the API boundary are **raw bytes**. Use the `Encoding` helper to
+convert between raw bytes and hex / base64 when persisting or transmitting
+keys.
 
-Use the function `encryptWithSecret(string $message, string $key, bool $hexEncoded = true)` to encrypt a message with a secret key.
-This function expects the message or data to be encrypted as a string, and the secret key as a hexadecimal string.
-If your secret is not a hexadecimal encoded, you can pass `false` as the third parameter to indicate that the secret is not encoded.
-
-You can either generate a secret key with `generateSecret()` or use a pre-existing one.
-
-Alternatively, you can pass in a reference to a null or empty string to generate a secret key.
+## Password hashing (for storing user passwords)
 
 ```php
-    $mySecret = null;
-    $data = "Hello world! This is a secret message.";
-    $result = $crypt->encryptWithSecret($data, $mySecret);
-    // $mySecret has now been populated with a new secret key
+$pw = $crypt->passwords();
 
-    // Alternatively, generate a new key.
-    $mySecret = $crypt->generateEncryptionSecret();
-    $result = $crypt->encryptWithSecret($data, $mySecret);
+$hash = $pw->hash('correct horse battery staple');
+// Store $hash in your database.
 
-    // Alternatively, create a key and encode it as hex.
-    // Keys should be 32 bytes long - shorter keys are forced to this length by a deterministic hash,
-    // but this is not recommended. Longer keys will throw an InvalidArgumentException.
-    $mySecret = bin2hex("my_super_secret_key");
-    // ...or use random_bytes() to generate a random key.
-    $mySecret = bin2hex(random_bytes(32));
-    $result = $crypt->encryptWithSecret($data, $mySecret);
-    
-    // Or, pass in a raw binary key by setting the `hex` parameter to false.
-    $mySecret = random_bytes(32);
-    $result = $crypt->encryptWithSecret($data, $mySecret, false);
-    // $result is now base64 encoded, e.g.
-    echo $result;
-    // wgYwuB/by9bz+CvHj1EtylicXnRH6hl9hLALsUUPUHaZeO3sEj4hgi8+pKBZGZIG6ueRKw3xpvrG8dRWU9OCn3aMtlwLz8aapUX/oK3L 
-```
-
-To decrypt your message, use the function `decryptWithSecret()`.
-
-```php
-    $mySecret = "my_super_secret_key";
-    $message = "This is a test message.";
-    $encrypted = $crypt->encryptWithSecret($message, $mySecret, false);
-    echo $encrypted, PHP_EOL;
-    $decrypted = $crypt->decryptWithSecret($encrypted, $mySecret, false);
-    echo $decrypted, PHP_EOL;
-```
-
-### Asymmetric Encryption
-
-To carry out authenticated asymmetric encryption (i.e. where the message is both encrypted and the sender of the message can be verified), you need to generate a public and private key pair for the sender.
-You will also need the public key of the recipient.
-
-```php
-    // Generate a new random keypair.
-    $keypair = $crypt->generateEncryptionKeypair();
-    // Or provide a password to generate a deterministic keypair.
-    $keypair = $crypt->generateEncryptionKeypair("my_super_secret_password");
-    // Or use a pre-existing keypair.
-    
-    // Once you have a keypair, you can export the public key as a hexadecimal string,
-    // for storage or transmission.
-    $publicKey = $keypair['publicKey'];
-    
-    // The keypair also includes the private key.
-    $privateKey = $keypair['privateKey'];    
-
-    // The full keypair is also provided. This is a string containing both the private and public key.
-    $fullKeypair = $keypair['keypair'];
-```
-
-As an example, let's encrypt a message from Alice to Bob.
-
-```php
-    $aliceKeypair = $crypt->generateEncryptionKeypair("alice_secret");
-    // In the real-world, Bob has provided Alice with his public key, but for demo purposes
-    // we'll generate a keypair for him too.
-    $bobKeypair = $crypt->generateEncryptionKeypair("bob_secret");
-    
-    // Alice encrypts a message for Bob, using his public key and her private key.
-    $message = "Hello Bob! This is a secret message from Alice.";
-    $encrypted = $crypt->encryptWithKey($message, $bobKeypair['publicKey'], $aliceKeypair['privateKey']);
-    // Alice can now transmit $encrypted to Bob. It will look something like this:
-    // hMvdJf2L78ZWcF38WRXJ16q3xXnlsWWfOsbJISPVwJhBtdcWbZ8SquS3oyJD1k6H/lAs+VHXPpDNfYLWO3wMLl+FB8rYUyCe+IZzti3dFL0YljeJ3QreGlrv
-    echo $encrypted, PHP_EOL;
-    
-    // Bob decrypts the message using his private key and the public key of Alice.
-    $decrypted = $crypt->decryptWithKey($encrypted, $bobKeypair['privateKey'], $aliceKeypair['publicKey']);
-    // Hello Bob! This is a secret message from Alice.
-    echo $decrypted, PHP_EOL;
-```
-
-You can also use this library to carry out anonymous asymmetric encryption, using only the public key of the 
-recipient. In this case, the sender's private key is not required and although only the recipient (the holder of the corresponding private key) can decode the message,
-they cannot identify or authenticate the sender. This is similar to `openssl_public_encrypt `.
-
-```php
-    $bobKeypair = $crypt->generateEncryptionKeypair("bob_secret");
-    // Alice encrypts a message for Bob, using his public key.
-    $message = "Hello Bob! This is a secret message from an unknown sender.";
-    $encrypted = $crypt->encryptWithKey($message, $bobKeypair['publicKey']);
-    // Alice can now transmit $encrypted to Bob.
-    echo $encrypted, PHP_EOL;
-    
-    // Bob decrypts the message using his full keypair.
-    $decrypted = $crypt->decryptWithKey($encrypted, $bobKeypair['keypair']);
-    // Hello Bob! This is a secret message from an unknown sender.
-    echo $decrypted, PHP_EOL;
-```
-
-### Digital Signing
-
-Asymmetric encryption is useful for securing messages, but it is also useful for authenticating the sender of a message.
-
-Digital signatures are a way to authenticate the sender of a message, as well the message itself, ensuring it 
-has not been tampered with or altered during transmission.
-
-```php
-    // Generate a new random keypair.
-    // Like generateEncryptionKeypair, you can also optionally provide a password to generate a deterministic keypair.
-    $aliceSigningKeypair = $crypt->generateSigningKeypair();
-    
-    // Alice signs a message for Bob, using her private key.
-    $message = "This is a message signed by Alice.";
-    $signedMessage = $crypt->getSignedMessage($message, $aliceSigningKeypair['privateKey']);
-    // Alice can now transmit $signedMessage to Bob. It will look something like this:
-    // JaI6p6jb5qQ041DiK1Yqbk8u1r/wVAovzy57ELfwrWfhqLCUU9jTzBLH6K6v1VF/8vOxaOZe2r8ch/GUKmfgC1RoaXMgaXMgYSBtZXNzYWdlIHNpZ25lZCBieSBBbGljZS4=
-    // Note: The message itself is NOT encrypted and can be viewed by anyone, by decoding the base64-encoded signed message.
-    echo $signedMessage, PHP_EOL;
-    
-    // Bob can now use Alice's public key to verify the signature and obtain the message part.
-    // If the message has been tampered with, the signature will be invalid and the message will be rejected.
-    $verifiedMessage = $crypt->verifySignedMessage($signedMessage, $aliceSigningKeypair['publicKey']);
-    // This is a message signed by Alice.
-    echo $verifiedMessage, PHP_EOL;
-    
-```
-
-We can also generate a signature for a message without attaching it to the message itself.
-
-```php
-    $aliceSigningKeypair = $crypt->generateSigningKeypair();
-    
-    // Alice signs a message for Bob, using her private key.
-    $message = "This is a message signed by Alice.";
-    $signature = $crypt->getMessageSignature($message, $aliceSigningKeypair['privateKey']);
-    
-    // Alice can now transmit the message and signature separately to Bob.
-    // Bob can now use Alice's public key to verify the signature.
-    // If the message has been tampered with, the signature will be invalid and the message will be rejected.
-    $messageAuthenticated = $crypt->verifyMessageSignature($message, $signature, $aliceSigningKeypair['publicKey']);
-    if ($messageAuthenticated === true) {
-        echo "The message has not been tampered with.", PHP_EOL;
-    } 
-```
-
-### Message Authentication
-
-Instead of asymmetric keys, we can also use a shared secret to generate a Message Authentication Code (MAC) 
-and use this to sign and authenticate messages.
-
-```php
-    $message = "This is a message signed anonymously with a secret key.";
-    // We can generate a secure, random 32 byte key, which is returned as a hexadecimal string.
-    $secret = $crypt->generateSigningSecret();
-    // Or, as long as the key is 32 bytes (256 bits), you can use any other string.
-    $secret = hash("sha256", "my secret key");
-    
-    // Like with the symmetric encryption functions, you can pass an optional third parameter
-    // to signWithSecret to specify that the secret key is NOT a hexadecimal string.
-    $secret = hash("sha256", "my secret key", true);
-    $signature = $crypt->signWithSecret($message, $secret, false);
-
-    // Or omit this parameter if the secret is a hexadecimal string.
-    $secret = $crypt->generateSigningSecret();
-    $signature = $crypt->signWithSecret($message, $secret);
-    
-    // The message can now be either transmitted to someone else who also has the shared secret,
-    // or later verified on the same system, e.g. after being retrieved from a database.
-    $messageAuthenticated = $crypt->verifyWithSecret($signature, $message, $secret);
-    
-    if ($messageAuthenticated === true) {
-        echo "The message has not been tampered with.", PHP_EOL;
+if ($pw->verify($userInput, $hash)) {
+    // login succeeded
+    if ($pw->needsRehash($hash)) {
+        $hash = $pw->hash($userInput);
+        // update stored hash
     }
-    
-    // Similarly, pass false as the third parameter if the secret is NOT a hexadecimal string.
-    $secret = hash("sha256", "my secret key", true);
-    $signature = $crypt->signWithSecret($message, $secret, false);
-    $messageAuthenticated = $crypt->verifyWithSecret($signature, $message, $secret, false);
-    if ($messageAuthenticated === true) {
-        echo "The message has not been tampered with.", PHP_EOL;
-    }       
+}
 ```
 
-### Licence
+Uses Argon2id with `OPSLIMIT_MODERATE` / `MEMLIMIT_MODERATE` by default.
+Configure stronger or weaker parameters via the constructor:
 
-This software is released under the [MIT License](https://opensource.org/licenses/MIT).
+```php
+use Gebler\Encryption\PasswordHasher;
 
-### Bugs, questions, comments
+$pw = new PasswordHasher(
+    PasswordHasher::OPSLIMIT_SENSITIVE,
+    PasswordHasher::MEMLIMIT_SENSITIVE,
+);
+```
 
-Please raise a GitHub issue if you encounter any problems or have any questions.
+## Symmetric encryption
 
+### With a password (Argon2id-derived key)
+
+```php
+$sym = $crypt->symmetric();
+
+$ciphertext = $sym->encryptWithPassword('secret message', 'a strong password');
+$plaintext  = $sym->decryptWithPassword($ciphertext, 'a strong password');
+```
+
+### With a 32-byte key
+
+```php
+use Gebler\Encryption\Encoding;
+
+$sym = $crypt->symmetric();
+
+$key = $sym->generateKey();              // 32 raw bytes
+$keyHex = Encoding::toHex($key);         // store this
+
+// later:
+$key = Encoding::fromHex($keyHex);
+$ciphertext = $sym->encryptWithKey('secret', $key);
+$plaintext  = $sym->decryptWithKey($ciphertext, $key);
+```
+
+Wrong-length keys throw `InvalidKeyException`. There is no silent stretching.
+
+## Asymmetric encryption
+
+```php
+$asym = $crypt->asymmetric();
+$alice = $asym->generateKeypair();
+$bob   = $asym->generateKeypair();
+```
+
+### Authenticated (Alice → Bob, both identified)
+
+```php
+$ciphertext = $asym->encryptAuthenticated(
+    'Hi Bob, it is Alice.',
+    $bob->publicKey,
+    $alice->privateKey,
+);
+
+$plaintext = $asym->decryptAuthenticated(
+    $ciphertext,
+    $bob->privateKey,
+    $alice->publicKey,
+);
+```
+
+### Anonymous (sender hidden)
+
+```php
+$ciphertext = $asym->encryptAnonymous('Anonymous tip.', $bob->publicKey);
+$plaintext  = $asym->decryptAnonymous($ciphertext, $bob);
+```
+
+## Digital signatures (Ed25519)
+
+```php
+$signing = $crypt->signing();
+$alice = $signing->generateKeypair();
+```
+
+### Attached signature
+
+```php
+$signed = $signing->signAttached('a public statement', $alice->privateKey);
+$original = $signing->openAttached($signed, $alice->publicKey);
+```
+
+### Detached signature
+
+```php
+$signature = $signing->signDetached('a public statement', $alice->privateKey);
+$valid = $signing->verifyDetached($signature, 'a public statement', $alice->publicKey);
+```
+
+## Message authentication (shared secret)
+
+```php
+$mac = $crypt->mac();
+$key = $mac->generateKey();
+
+$tag = $mac->sign('a message', $key);
+$ok  = $mac->verify($tag, 'a message', $key); // true
+```
+
+## Exceptions
+
+The library uses two distinct exception trees:
+
+**`Gebler\Encryption\Exception\EncryptionException`** (extends `RuntimeException`)
+— runtime crypto failures. Catch this base type to handle any cipher /
+signature failure at once.
+
+| Subclass | Thrown when |
+|---|---|
+| `DecryptionFailedException` | Wrong key, wrong password, tampered ciphertext, signature verification failure |
+| `SodiumOperationException` | Underlying sodium primitive raised `SodiumException` |
+
+**`\InvalidArgumentException`** — input-shape errors (programmer mistakes
+detectable at the call site, separate from crypto failures):
+
+| Exception | Thrown when |
+|---|---|
+| `Gebler\Encryption\Exception\InvalidKeyException` | Key or signature has wrong length |
+| `\InvalidArgumentException` (directly) | Plaintext / message is empty |
+
+To handle everything, catch both `EncryptionException` and
+`\InvalidArgumentException`.
+
+## License
+
+MIT.
