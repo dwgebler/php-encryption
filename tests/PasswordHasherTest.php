@@ -11,6 +11,7 @@ final class PasswordHasherTest extends TestCase
 {
     private PasswordHasher $hasher;
 
+    #[\Override]
     protected function setUp(): void
     {
         // Use INTERACTIVE ops/mem in tests so the suite stays fast.

@@ -14,6 +14,7 @@ final class MacTest extends TestCase
 {
     private Mac $mac;
 
+    #[\Override]
     protected function setUp(): void
     {
         $this->mac = new Mac();

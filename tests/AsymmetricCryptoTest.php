@@ -16,6 +16,7 @@ final class AsymmetricCryptoTest extends TestCase
 {
     private AsymmetricCrypto $crypto;
 
+    #[\Override]
     protected function setUp(): void
     {
         $this->crypto = new AsymmetricCrypto();

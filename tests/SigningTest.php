@@ -16,6 +16,7 @@ final class SigningTest extends TestCase
 {
     private Signing $signing;
 
+    #[\Override]
     protected function setUp(): void
     {
         $this->signing = new Signing();

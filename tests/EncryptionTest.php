@@ -16,6 +16,7 @@ final class EncryptionTest extends TestCase
 {
     private Encryption $crypt;
 
+    #[\Override]
     protected function setUp(): void
     {
         $this->crypt = new Encryption();

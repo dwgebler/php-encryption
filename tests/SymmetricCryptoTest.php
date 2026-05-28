@@ -15,6 +15,7 @@ final class SymmetricCryptoTest extends TestCase
 {
     private SymmetricCrypto $crypto;
 
+    #[\Override]
     protected function setUp(): void
     {
         $this->crypto = new SymmetricCrypto();
