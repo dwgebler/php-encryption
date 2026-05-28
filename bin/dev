@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Run a command inside the dev PHP container. Builds the image on first use.
+set -euo pipefail
+
+IMAGE="php-encryption-dev:8.3"
+PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+
+if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+    echo "Building $IMAGE..." >&2
+    docker build -f "$PROJECT_DIR/Dockerfile.dev" -t "$IMAGE" "$PROJECT_DIR"
+fi
+
+exec docker run --rm \
+    -u "$(id -u):$(id -g)" \
+    -v "$PROJECT_DIR:/app" \
+    -w /app \
+    -e COMPOSER_HOME=/tmp/composer \
+    "$IMAGE" \
+    "$@"

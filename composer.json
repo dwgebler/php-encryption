@@ -1,17 +1,15 @@
 {
-    "config": {
-        "platform": {
-            "php": "7.2.34"
-        }
-    },
     "name": "dwgebler/encryption",
-    "version": "1.1.0",
-    "description": "Encryption wrapper for PHP which uses libsodium to provide a simple API for symmetric and asymmetric encryption, decryption, digital signing and message authentication.",
+    "description": "Encryption wrapper for PHP using libsodium — simple API for symmetric and asymmetric encryption, password hashing, digital signing, and message authentication.",
     "type": "library",
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "Gebler\\Encryption\\": "src/",
+            "Gebler\\Encryption\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
             "Gebler\\Encryption\\Tests\\": "tests/"
         }
     },
@@ -22,12 +20,20 @@
         }
     ],
     "require": {
-        "php": ">=7.2.0",
-        "ext-sodium": "*",
-        "ext-mbstring": "*"
+        "php": "^8.2",
+        "ext-sodium": "*"
     },
     "require-dev": {
-        "squizlabs/php_codesniffer": "^3.6",
-        "phpunit/phpunit": "^8.0"
+        "phpunit/phpunit": "^11.0",
+        "phpstan/phpstan": "^1.11",
+        "vimeo/psalm": "^6.0",
+        "squizlabs/php_codesniffer": "^3.10"
+    },
+    "scripts": {
+        "test": "phpunit",
+        "stan": "phpstan analyse",
+        "psalm": "psalm",
+        "cs": "phpcs",
+        "check": ["@cs", "@stan", "@psalm", "@test"]
     }
 }

@@ -1,7 +1,12 @@
 composer.phar
 /vendor/
 /.idea/
+/composer.lock
+/coverage.xml
+/.phpunit.cache/
+/.phpunit.result.cache
+/.phpstan-cache/
+/.psalm-cache/
 
-# Commit your application's lock file https://getcomposer.org/doc/01-basic-usage.md#commit-your-composer-lock-file-to-version-control
-# You may choose to ignore a library lock file http://getcomposer.org/doc/02-libraries.md#lock-file
-# composer.lock
+# Internal process docs — not committed
+/docs/superpowers/

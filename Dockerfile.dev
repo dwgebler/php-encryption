@@ -1,0 +1,18 @@
+# Development image pinning PHP and required extensions for local
+# tooling (composer, phpunit, phpstan, psalm, phpcs). CI uses its own
+# matrix via GitHub Actions; this image is only for local work.
+
+FROM php:8.3-cli-bookworm
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git \
+        unzip \
+        libsodium-dev \
+        libzip-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN docker-php-ext-install sodium zip
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /app
