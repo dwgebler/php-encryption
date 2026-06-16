@@ -11,6 +11,7 @@ a password hash, those stored values offer essentially no protection against
 offline brute-force attack.** `hashPassword()` in 1.x computed a single
 unsalted BLAKE2b hash, which is fast and deterministic — equivalent in
 strength to a single round of SHA-256 from an attacker's perspective.
+(Note this was never a documented/recommended use of the function; its usage was intended as a way to create a deterministic length password for use with symmetric encryption, from a shorter or indeterminate length password)
 
 There is no safe in-place migration without the plaintext. **On the user's
 next successful login, re-hash their password using the new
